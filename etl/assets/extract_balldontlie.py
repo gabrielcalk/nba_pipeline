@@ -8,7 +8,7 @@ class ExtractBalldontlie:
         self.end_date = end_date
         self.base_url = api_url
 
-    def extract_players(self):
+    def extract_employees(self):
         url = f"{self.base_url}/players"
         params = {"team_ids[]": self.team_id}
         data = self._fetch_data(url, params)

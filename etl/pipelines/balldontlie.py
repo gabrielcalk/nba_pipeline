@@ -3,9 +3,10 @@ from pathlib import Path
 import yaml
 import os
 from nba_pipeline.etl.assets.extract_balldontlie import ExtractBalldontlie
-# from etl.assets.transform_balldontlie import TransformBalldontlie
-# from etl.assets.load_balldontlie import LoadBalldontlie
-# from etl.connectors.postgresql import PostgreSqlClient
+from nba_pipeline.etl.assets.transform_balldontlie import TransformBalldontlie
+from nba_pipeline.etl.assets.load_balldontlie import LoadBalldontlie
+from nba_pipeline.etl.connectors.postgresql import PostgreSqlClient
+from jinja2 import Environment, FileSystemLoader
 
 def get_config():
     # Get the path of the current script and replace the extension
@@ -46,31 +47,43 @@ if __name__ == "__main__":
         # Extracting
         extractor = ExtractBalldontlie(BALL_DONT_LIE_API_KEY, api_url, team_id, start_date, end_date)
         team = extractor.extract_team()
-        team_players = extractor.extract_players()
+        team_employees = extractor.extract_employees()
         team_games = extractor.extract_games()
         games_ids = [game.get("id") for game in team_games]
         players_stats = extractor.extract_players_stats(games_ids)
-        print(players_stats)
 
         # Transforming
-        # transformer = TransformBalldontlie(df_team_players, df_team_games, df_players_stats)
+        transformer = TransformBalldontlie(team, team_employees, team_games, players_stats)
+        df_team = transformer.team()
+        df_team_employees = transformer.team_employees()
+        
         # df_players_performance = transformer.players_performance()
         # df_team_performance = transformer.team_performance()
 
         # # Loading
-        # SERVER_NAME = os.environ.get("DB_SERVER_NAME")
-        # DATABASE_NAME = os.environ.get("DB_NAME")
-        # DB_USERNAME = os.environ.get("DB_USERNAME")
-        # DB_PASSWORD = os.environ.get("DB_PASSWORD")
-        # PORT = os.environ.get("DB_PORT")
+        SERVER_NAME = os.environ.get("DB_SERVER_NAME")
+        DATABASE_NAME = os.environ.get("DB_NAME")
+        DB_USERNAME = os.environ.get("DB_USERNAME")
+        DB_PASSWORD = os.environ.get("DB_PASSWORD")
+        PORT = os.environ.get("DB_PORT")
 
-        # postgresql_client = PostgreSqlClient(
-        #     server_name=SERVER_NAME,
-        #     database_name=DATABASE_NAME,
-        #     username=DB_USERNAME,
-        #     password=DB_PASSWORD,
-        #     port=PORT,
-        # )
+        postgresql_client = PostgreSqlClient(
+            server_name=SERVER_NAME,
+            database_name=DATABASE_NAME,
+            username=DB_USERNAME,
+            password=DB_PASSWORD,
+            port=PORT,
+        )
+        
+      
+        tables_template = Environment(
+            loader=FileSystemLoader("nba_pipeline/etl/assets/sql/tables")
+        )
+        
+        loader = LoadBalldontlie(tables_template, postgresql_client)
+  
+        loader.load_team(df_team, "team")
+        loader.load_team_players(df_team_employees, "team_employees")
 
         # team_name = df_team.get("name")
         # season = start_date.split("-")[0]
@@ -90,7 +103,7 @@ if __name__ == "__main__":
         # loader.load(df_team_performance, team_performance_table)
         # loader.load(df_players_performance, players_performance_table)
 
-    except BaseException as e:
+    except Exception as e:
         print(f"Pipeline run failed. See detailed logs: {e}")
         # pipeline_logging.logger.error(f"Pipeline run failed. See detailed logs: {e}")
         # metadata_logger.log(
