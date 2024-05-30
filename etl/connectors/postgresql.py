@@ -1,7 +1,8 @@
-from sqlalchemy import create_engine, Table, MetaData
+from sqlalchemy import create_engine, Table, MetaData, inspect
 from sqlalchemy.engine import URL
-from sqlalchemy.dialects import postgresql
-
+from sqlalchemy.dialects.postgresql import insert 
+from pandas import DataFrame
+from jinja2 import Environment
 
 class PostgreSqlClient:
     """
@@ -33,37 +34,51 @@ class PostgreSqlClient:
 
         self.engine = create_engine(connection_url)
 
+    def execute_sql(self, sql: str) -> None:
+        self.engine.execute(sql)
+
     def select_all(self, table: Table) -> list[dict]:
+        """
+        Execute SQL code provided and returns the result in a list of dictionaries.
+        This method should only be used if you expect a resultset to be returned.
+        """
         return [dict(row) for row in self.engine.execute(table.select()).all()]
-
-    def create_table(self, metadata: MetaData) -> None:
+    
+    def table_exists(self, table_name: str) -> bool:
         """
-        Creates table provided in the metadata object
+        Checks if the table already exists in the database.
         """
-        metadata.create_all(self.engine)
+        return inspect(self.engine).has_table(table_name)
+    
+    def create_table(self, table_name: str, tables_template: Environment) -> None:
+        team_table = tables_template.get_template(f"{table_name}.sql")
+        exec_sql = team_table.render()
+        self.execute_sql(exec_sql)
 
-    def drop_table(self, table_name: str) -> None:
-        self.engine.execute(f"drop table if exists {table_name};")
+    def insert(self, data: DataFrame, tables_template: Environment, table_name: str) -> None:
+        if not self.table_exists(table_name):
+            self.create_table(table_name, tables_template)
+        
+        data_dict = data.to_dict(orient='records')
+        table = Table(table_name, MetaData(), autoload_with=self.engine)
+        stmt = insert(table).values(data_dict)
+        self.engine.execute(stmt)
+        
+    def upsert(self, data: DataFrame, tables_template: Environment, table_name: str) -> None:
+        if not self.table_exists(table_name):
+            self.create_table(table_name, tables_template)
 
-    def insert(self, data: list[dict], table: Table, metadata: MetaData) -> None:
-        metadata.create_all(self.engine)
-        insert_statement = postgresql.insert(table).values(data)
-        self.engine.execute(insert_statement)
+        data_dict = data.to_dict(orient='records')
+        table = Table(table_name, MetaData(), autoload_with=self.engine)
 
-    def overwrite(self, data: list[dict], table: Table, metadata: MetaData) -> None:
-        self.drop_table(table.name)
-        self.insert(data=data, table=table, metadata=metadata)
+        # Use PostgreSQL-specific insert function for upsert capability
+        stmt = insert(table).values(data_dict)
 
-    def upsert(self, data: list[dict], table: Table, metadata: MetaData) -> None:
-        metadata.create_all(self.engine)
-        key_columns = [
-            pk_column.name for pk_column in table.primary_key.columns.values()
-        ]
-        insert_statement = postgresql.insert(table).values(data)
-        upsert_statement = insert_statement.on_conflict_do_update(
-            index_elements=key_columns,
-            set_={
-                c.key: c for c in insert_statement.excluded if c.key not in key_columns
-            },
+        # Preparing the on_conflict_do_update clause
+        on_conflict_stmt = stmt.on_conflict_do_update(
+            index_elements=['id'],  # Assume 'id' as the conflict target
+            set_={c.name: stmt.excluded[c.name] for c in table.columns if c.name != 'id'}
         )
-        self.engine.execute(upsert_statement)
+
+        # Executing the upsert operation
+        self.engine.execute(on_conflict_stmt)
