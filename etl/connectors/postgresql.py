@@ -50,23 +50,25 @@ class PostgreSqlClient:
         """
         return inspect(self.engine).has_table(table_name)
     
-    def create_table(self, table_name: str, tables_template: Environment) -> None:
-        team_table = tables_template.get_template(f"{table_name}.sql")
-        exec_sql = team_table.render()
+    def create_table(self, table_name: str, table_file_name: str, tables_template: Environment) -> None:
+        team_table = tables_template.get_template(f"{table_file_name}.sql.j2")
+        exec_sql = team_table.render(table_name=table_name)
         self.execute_sql(exec_sql)
 
-    def insert(self, data: DataFrame, tables_template: Environment, table_name: str) -> None:
-        if not self.table_exists(table_name):
+    def insert(self, data: DataFrame, tables_template: Environment, team_name: str, table_name: str) -> None:
+        table_name_with_team = f"{team_name}_{table_name}"
+        
+        if not self.table_exists(table_name_with_team):
             self.create_table(table_name, tables_template)
         
         data_dict = data.to_dict(orient='records')
-        table = Table(table_name, MetaData(), autoload_with=self.engine)
+        table = Table(table_name_with_team, MetaData(), autoload_with=self.engine)
         stmt = insert(table).values(data_dict)
         self.engine.execute(stmt)
         
-    def upsert(self, data: DataFrame, tables_template: Environment, table_name: str) -> None:
+    def upsert(self, data: DataFrame, tables_template: Environment, table_name: str, file_name: str) -> None:
         if not self.table_exists(table_name):
-            self.create_table(table_name, tables_template)
+            self.create_table(table_name, file_name, tables_template)
 
         data_dict = data.to_dict(orient='records')
         table = Table(table_name, MetaData(), autoload_with=self.engine)

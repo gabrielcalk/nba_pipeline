@@ -1,4 +1,4 @@
 team_id: 2
-start_date: "2024-01-01"
-end_date: "2024-12-31"
+team_name: "celtics"
+season: "2023"
 api_url: "https://api.balldontlie.io/v1/"

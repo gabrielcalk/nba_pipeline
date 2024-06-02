@@ -1,48 +1,63 @@
 import requests
 
 class ExtractBalldontlie:
-    def __init__(self, api_key, api_url, team_id, start_date, end_date):
+    def __init__(self, api_key, api_url, team_id, season):
         self.api_key = api_key
         self.team_id = team_id
-        self.start_date = start_date
-        self.end_date = end_date
+        self.season = season
         self.base_url = api_url
 
-    def extract_employees(self):
+    def extract_players(self):
         url = f"{self.base_url}/players"
         params = {"team_ids[]": self.team_id}
         data = self._fetch_data(url, params)
-        return data
+        players_data = data.get("data")
+        players_with_position = [player for player in players_data if player['position'] != '']
+        return players_with_position
 
     def extract_team(self):
         url = f"{self.base_url}/teams/{self.team_id}"
         data = self._fetch_data(url)
-        return data
+        return data.get("data")
 
     def extract_games(self):
         url = f"{self.base_url}/games"
         params = {
             "team_ids[]": self.team_id,
-            "start_date": self.start_date,
-            "end_date": self.end_date,
+            "seasons[]=2023": self.season,
             "per_page": 100
         }
         data = self._fetch_data(url, params)
-        return data
+        return data.get("data")
 
-    def extract_players_stats(self, game_ids):
+    def extract_players_stats(self, players_ids):
+        """
+        Extracts player statistics for a list of player IDs for the current season.
+        
+        Args:
+            players_ids (list): A list of player IDs to fetch stats for.
+        
+        Returns:
+            list: A list of dictionaries containing player statistics.
+        """
         url = f"{self.base_url}/stats"
         params = {
-            "start_date": self.start_date,
-            "end_date": self.end_date,
-            "per_page": 100,
-            "game_ids[]": game_ids
+            "seasons[]": self.season,
+            "player_ids[]": players_ids,
+            "per_page": 100 
         }
-        data = self._fetch_data(url, params)
-        return data
+        
+        collected_data = []
+        while True:
+            response = self._fetch_data(url, params)
+            collected_data.extend(response.get('data', []))
+            next_cursor = response.get('meta', {}).get('next_cursor')
+            if not next_cursor:  
+                break
+            params['cursor'] = next_cursor
+        
+        return collected_data
 
-    def transform_data(self):
-        print("Data transformed")
 
     def _fetch_data(self, url, params=None):
         headers = {
@@ -50,7 +65,7 @@ class ExtractBalldontlie:
         }
         response = requests.get(url=url, params=params, headers=headers)
         if response.status_code == 200:
-            return response.json().get("data")
+            return response.json()
         else:
             raise Exception(
                 f"Failed to fetch data. Status Code: {response.status_code}. Response: {response.text}"

@@ -1,7 +1,6 @@
-CREATE TABLE team_employees (
+CREATE TABLE {{ table_name | lower }} (
     id INT PRIMARY KEY,
     "teamId" INT,
-    "isCurrentPlayer" BOOLEAN,
     "fullName" VARCHAR(255),
     position VARCHAR(5),
     height VARCHAR(5),
