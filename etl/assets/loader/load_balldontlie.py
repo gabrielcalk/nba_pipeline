@@ -30,7 +30,9 @@ class LoadBalldontlie:
         self.df_players_overall_performance = df_players_overall_performance
         self.chunk_size = chunk_size
         
-    def load(self):
+    def load(self, mode: str):
+        if(mode == "full"):
+            self.sql_client.drop_tables()
         self.load_team("team")
         self.load_team_players("players")
         self.load_team_games("games")
@@ -61,4 +63,5 @@ class LoadBalldontlie:
         table_name = f"{self.team_name}_{self.season}_{file_name}"
         self.logger.info(f"Loaded players overall performance data. Size: {len(self.df_players_overall_performance)}. Table: {table_name}")
         self.sql_client.upsert(self.df_players_overall_performance, self.tables_template, table_name, file_name, self.chunk_size)
-        
+    
+    

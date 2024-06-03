@@ -68,6 +68,13 @@ class PostgreSqlClient:
             self.engine.execute(stmt)
             self.logger.info(f"Inserted chunk {chunk//chunk_size + 1} into table {table_name}")
 
+    def drop_tables(self) -> None:
+        inspector = inspect(self.engine)
+        tables = inspector.get_table_names()
+        for table in tables:
+            self.execute_sql(f"DROP TABLE {table} CASCADE")
+            self.logger.info(f"Table {table} dropped.")
+
     def upsert(self, data: DataFrame, tables_template: Environment, table_name: str, file_name: str, chunk_size: int) -> None:
         if not self.table_exists(table_name):
             self.create_table(table_name, file_name, tables_template)

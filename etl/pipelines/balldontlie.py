@@ -124,7 +124,7 @@ if __name__ == "__main__":
             df_players_overall_performance=df_players_overall_performance,
         )
         
-        loader.load()
+        loader.load(mode=MODE)
         
         logger.info("Pipeline run successfully.")
     except Exception as e:
