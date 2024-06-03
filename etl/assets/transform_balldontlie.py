@@ -1,4 +1,4 @@
-from pandas import DataFrame, NamedAgg, json_normalize, to_numeric
+from pandas import DataFrame, json_normalize, to_numeric
 from datetime import datetime
 
 class TransformBalldontlie:

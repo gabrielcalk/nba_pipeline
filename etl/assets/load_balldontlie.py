@@ -1,6 +1,6 @@
 from jinja2 import Environment
 from pandas import DataFrame
-from nba_pipeline.etl.connectors.postgresql import PostgreSqlClient
+from etl.connectors.postgresql import PostgreSqlClient
 
 class LoadBalldontlie:
     def __init__(self, tables_template: Environment, team_name: str, season: int, postgresql_client: PostgreSqlClient):

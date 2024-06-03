@@ -2,10 +2,10 @@ from dotenv import load_dotenv
 from pathlib import Path
 import yaml
 import os
-from nba_pipeline.etl.assets.extract_balldontlie import ExtractBalldontlie
-from nba_pipeline.etl.assets.transform_balldontlie import TransformBalldontlie
-from nba_pipeline.etl.assets.load_balldontlie import LoadBalldontlie
-from nba_pipeline.etl.connectors.postgresql import PostgreSqlClient
+from etl.assets.extract_balldontlie import ExtractBalldontlie
+from etl.assets.transform_balldontlie import TransformBalldontlie
+from etl.assets.load_balldontlie import LoadBalldontlie
+from etl.connectors.postgresql import PostgreSqlClient
 from jinja2 import Environment, FileSystemLoader
 
 def get_config():
@@ -89,7 +89,7 @@ if __name__ == "__main__":
         )
       
         tables_template = Environment(
-            loader=FileSystemLoader("nba_pipeline/etl/assets/sql/tables")
+            loader=FileSystemLoader("etl/assets/sql/tables")
         )
         
         loader = LoadBalldontlie(
