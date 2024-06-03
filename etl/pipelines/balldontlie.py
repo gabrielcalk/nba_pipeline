@@ -47,8 +47,6 @@ if __name__ == "__main__":
     
     BALL_DONT_LIE_API_KEY = os.environ.get("BALL_DONT_LIE_API_KEY")
     
-    print(BALL_DONT_LIE_API_KEY)
-    
     tables_template = Environment(
         loader=FileSystemLoader("etl/assets/sql")
     )
