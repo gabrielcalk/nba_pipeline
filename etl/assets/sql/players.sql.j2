@@ -2,10 +2,10 @@ CREATE TABLE {{ table_name | lower }} (
     id INT PRIMARY KEY,
     "teamId" INT,
     "fullName" VARCHAR(255),
-    position VARCHAR(5),
-    height VARCHAR(5),
+    position VARCHAR(10),
+    height VARCHAR(10),
     weight VARCHAR(10),
-    "jerseyNumber" VARCHAR(5),
+    "jerseyNumber" VARCHAR(10),
     college VARCHAR(255),
     country VARCHAR(100),
     "yearsSinceDraft" INT
