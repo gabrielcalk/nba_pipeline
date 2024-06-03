@@ -6,4 +6,4 @@ pg8000==1.29.1
 pytest==7.1.2
 pyyaml==6.0
 Jinja2==3.1.2
-
+python-dotenv==1.0.0
