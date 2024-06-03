@@ -14,5 +14,11 @@ ENV DB_NAME="nbabootcamp"
 ENV DB_USERNAME="gabrielcalk"
 ENV DB_PASSWORD="fsdj102923slaof"
 ENV PORT=5432
+ENV ENV=prod
+ENV MODE=increment
+
+ENV AWS_ACCESS_KEY_ID=AKIAWNISAOJNVIXHJHPR
+ENV AWS_SECRET_ACCESS_KEY=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
+ENV AWS_DEFAULT_REGION=us-east-1
 
 CMD ["python", "-m", "etl.pipelines.balldontlie"]

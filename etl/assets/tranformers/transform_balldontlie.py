@@ -1,13 +1,33 @@
 from pandas import DataFrame, json_normalize, to_numeric
 from datetime import datetime
+from logging import Logger
 
 class TransformBalldontlie:
-    def __init__(self, team_data, team_players_data, team_games_data, players_stats_data):
+    def __init__(self, logger: Logger, team_data: dict, team_players_data: list[dict], team_games_data: list[dict], players_stats_data: list[dict]):
         self.team_data = team_data
         self.team_players_data = team_players_data
         self.team_games_data = team_games_data
         self.players_stats_data = players_stats_data
+        self.logger=logger
 
+    def transform(self):
+        df_team = self.team()
+        self.logger.info(f"Transformed team data")
+        
+        df_team_players = self.team_players()
+        self.logger.info(f"Transformed players data. Size: {len(df_team_players)}")
+        
+        df_team_games = self.team_games(self.team_data['id'])
+        self.logger.info(f"Transformed games data. Size: {len(df_team_games)}")
+        
+        df_players_performance = self.team_players_performance()
+        self.logger.info(f"Transformed players performance data. Size: {len(df_players_performance)}")
+        
+        df_players_overall_performance = self.team_players_overall_performance()
+        self.logger.info(f"Transformed players overall performance data. Size: {len(df_players_overall_performance)}")
+        
+        return df_team, df_team_players, df_team_games, df_players_performance, df_players_overall_performance
+    
     def team(self):
         df_team = DataFrame(self.team_data, index=[0])
         df_team.rename(columns={'full_name': 'fullName'}, inplace=True)
@@ -26,6 +46,9 @@ class TransformBalldontlie:
         return df_final
     
     def team_games(self, team_id: int):
+        if not self.team_games_data or len(self.team_games_data) == 0:
+            return DataFrame()
+        
         df_team = DataFrame(self.team_games_data)
         df_team.rename(columns={'home_team_score': 'homeTeamScore', 'visitor_team_score': 'visitorTeamScore'}, inplace=True)
 
@@ -47,6 +70,9 @@ class TransformBalldontlie:
         return df_final
     
     def team_players_performance(self):
+        if not self.players_stats_data or len(self.players_stats_data) == 0:
+            return DataFrame()
+        
         df_team_players_performance = DataFrame(self.players_stats_data)
         df_team_players_performance.rename(columns={
             'min': 'minutesPlayed',
@@ -109,6 +135,9 @@ class TransformBalldontlie:
         return df_final
     
     def team_players_overall_performance(self):
+        if not self.players_stats_data or len(self.players_stats_data) == 0:
+            return DataFrame()
+        
         df_team_players_performance = json_normalize(self.players_stats_data)
         df_team_players_performance['min'] = to_numeric(df_team_players_performance['min'], errors='coerce')
         

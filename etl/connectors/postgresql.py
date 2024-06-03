@@ -1,16 +1,14 @@
-from sqlalchemy import create_engine, Table, MetaData, inspect
+from sqlalchemy import create_engine, Table, MetaData, inspect, text
 from sqlalchemy.engine import URL
-from sqlalchemy.dialects.postgresql import insert 
+from sqlalchemy.dialects.postgresql import insert
 from pandas import DataFrame
 from jinja2 import Environment
+from logging import Logger
 
 class PostgreSqlClient:
-    """
-    A client for querying postgresql database.
-    """
-
     def __init__(
         self,
+        logger: Logger,
         server_name: str,
         database_name: str,
         username: str,
@@ -22,6 +20,7 @@ class PostgreSqlClient:
         self.username = username
         self.password = password
         self.port = port
+        self.logger = logger
 
         connection_url = URL.create(
             drivername="postgresql+pg8000",
@@ -36,51 +35,52 @@ class PostgreSqlClient:
 
     def execute_sql(self, sql: str) -> None:
         self.engine.execute(sql)
-
-    def select_all(self, table: Table) -> list[dict]:
-        """
-        Execute SQL code provided and returns the result in a list of dictionaries.
-        This method should only be used if you expect a resultset to be returned.
-        """
-        return [dict(row) for row in self.engine.execute(table.select()).all()]
+        
+    def select(self, query: str) -> list[dict]:
+        result = self.engine.execute(text(query))
+        return [dict(row) for row in result]
+    
+    def select_max_id(self, table_name: str) -> int:
+        result = self.select(f"select max(id) from {table_name}")
+        return result[0]['max']
     
     def table_exists(self, table_name: str) -> bool:
-        """
-        Checks if the table already exists in the database.
-        """
         return inspect(self.engine).has_table(table_name)
     
     def create_table(self, table_name: str, table_file_name: str, tables_template: Environment) -> None:
         team_table = tables_template.get_template(f"{table_file_name}.sql.j2")
         exec_sql = team_table.render(table_name=table_name)
         self.execute_sql(exec_sql)
+        self.logger.info(f"Table {table_name} created.")
 
-    def insert(self, data: DataFrame, tables_template: Environment, team_name: str, table_name: str) -> None:
-        table_name_with_team = f"{team_name}_{table_name}"
+    def insert(self, data: DataFrame, tables_template: Environment, table_name: str, file_name: str, chunk_size: int, mode: str) -> None:      
+        if not self.table_exists(table_name):
+            self.create_table(table_name, file_name, tables_template)
         
-        if not self.table_exists(table_name_with_team):
-            self.create_table(table_name, tables_template)
+        table = Table(table_name, MetaData(), autoload_with=self.engine)
         
-        data_dict = data.to_dict(orient='records')
-        table = Table(table_name_with_team, MetaData(), autoload_with=self.engine)
-        stmt = insert(table).values(data_dict)
-        self.engine.execute(stmt)
-        
-    def upsert(self, data: DataFrame, tables_template: Environment, table_name: str, file_name: str) -> None:
+        for chunk in range(0, len(data), chunk_size):
+            chunk_data = data.iloc[chunk:chunk + chunk_size]
+            data_dict = chunk_data.to_dict(orient='records')
+            stmt = insert(table).values(data_dict)
+            self.engine.execute(stmt)
+            self.logger.info(f"Inserted chunk {chunk//chunk_size + 1} into table {table_name}")
+
+    def upsert(self, data: DataFrame, tables_template: Environment, table_name: str, file_name: str, chunk_size: int) -> None:
         if not self.table_exists(table_name):
             self.create_table(table_name, file_name, tables_template)
 
-        data_dict = data.to_dict(orient='records')
         table = Table(table_name, MetaData(), autoload_with=self.engine)
+        
+        for chunk in range(0, len(data), chunk_size):
+            chunk_data = data.iloc[chunk:chunk + chunk_size]
+            data_dict = chunk_data.to_dict(orient='records')
 
-        # Use PostgreSQL-specific insert function for upsert capability
-        stmt = insert(table).values(data_dict)
+            stmt = insert(table).values(data_dict)
+            on_conflict_stmt = stmt.on_conflict_do_update(
+                index_elements=['id'],
+                set_={c.name: stmt.excluded[c.name] for c in table.columns if c.name != 'id'}
+            )
 
-        # Preparing the on_conflict_do_update clause
-        on_conflict_stmt = stmt.on_conflict_do_update(
-            index_elements=['id'],  # Assume 'id' as the conflict target
-            set_={c.name: stmt.excluded[c.name] for c in table.columns if c.name != 'id'}
-        )
-
-        # Executing the upsert operation
-        self.engine.execute(on_conflict_stmt)
+            self.engine.execute(on_conflict_stmt)
+            self.logger.info(f"Upserted chunk {chunk//chunk_size + 1} into table {table_name}")

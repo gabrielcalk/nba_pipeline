@@ -2,131 +2,132 @@ from dotenv import load_dotenv
 from pathlib import Path
 import yaml
 import os
-from etl.assets.extract_balldontlie import ExtractBalldontlie
-from etl.assets.transform_balldontlie import TransformBalldontlie
-from etl.assets.load_balldontlie import LoadBalldontlie
+from etl.assets.extractors.extract_balldontlie import ExtractBalldontlie
+from etl.assets.tranformers.transform_balldontlie import TransformBalldontlie
+from etl.assets.loader.load_balldontlie import LoadBalldontlie
 from etl.connectors.postgresql import PostgreSqlClient
+from etl.connectors.logger import get_logger
 from jinja2 import Environment, FileSystemLoader
+from etl.connectors.config_manager import get_parameter
 
 def get_config():
-    # Get the path of the current script and replace the extension
-    yaml_file_path = __file__.replace(".py", ".yaml")
-    # Check if the YAML file exists
-    if Path(yaml_file_path).exists():
-        # Open and read the YAML file
-        with open(yaml_file_path) as yaml_file:
-            pipeline_config = yaml.safe_load(yaml_file)
-            return pipeline_config
-    else:
-        # Raise an exception if the YAML file is not found
-        raise Exception(f"Missing {yaml_file_path} file")
+    isDevelopment = os.environ.get("ENV") == "dev"
+    if(isDevelopment):
+        yaml_file_path = __file__.replace(".py", ".yaml")
+       
+        if Path(yaml_file_path).exists():
+            with open(yaml_file_path) as yaml_file:
+                pipeline_config = yaml.safe_load(yaml_file)
+                return pipeline_config
+        else:
+            raise Exception(f"Missing {yaml_file_path} file")
+        
+    config = {
+        "team_id": get_parameter('team_id'),
+        "season": get_parameter('season'),
+        "api_url": get_parameter('api_url')
+    }
+    
+    return config
 
 if __name__ == "__main__":
     load_dotenv()
     
-    # Load the configuration
     config = get_config()
-    # Retrieve config
     team_id = config.get("team_id")
-    team_name = config.get("team_name")
     season = config.get("season")
     api_url = config.get("api_url")
+    
+    SERVER_NAME = os.environ.get("DB_SERVER_NAME")
+    DATABASE_NAME = os.environ.get("DB_NAME")
+    DB_USERNAME = os.environ.get("DB_USERNAME")
+    DB_PASSWORD = os.environ.get("DB_PASSWORD")
+    PORT = os.environ.get("DB_PORT")
+    MODE = os.environ.get("MODE", "increment")
+    
+    BALL_DONT_LIE_API_KEY = os.environ.get("BALL_DONT_LIE_API_KEY")
+    
+    tables_template = Environment(
+        loader=FileSystemLoader("etl/assets/sql")
+    )
 
     if not team_id:
         raise ValueError("Invalid or missing 'team_id' in configuration.")
     
-    if not team_name:
-        raise ValueError("Invalid or missing 'team_name' in configuration.")
-    
     if not season:
         raise ValueError("Invalid or missing 'season' in configuration.")
     
-    BALL_DONT_LIE_API_KEY =  os.environ.get("BALL_DONT_LIE_API_KEY")
+    if not api_url:
+        raise ValueError("Invalid or missing 'api_url' in configuration.")
+    
+    if not BALL_DONT_LIE_API_KEY:
+        raise ValueError("Invalid or missing 'BALL_DONT_LIE_API_KEY' in environment variables.")
+    
+    if not SERVER_NAME or not DATABASE_NAME or not DB_USERNAME or not DB_PASSWORD:
+        raise ValueError("Invalid or missing database configuration in environment variables.")
+
+    if not tables_template:
+        raise ValueError("Invalid or missing 'tables_template' in configuration.")
+    
+    logger = get_logger(
+        name='nba_pipeline_log', log_group='nba_pipeline_log_group', stream_name='nba_pipeline_log_stream'
+    )
+    
+    sql_client = PostgreSqlClient(
+        logger=logger,
+        server_name=SERVER_NAME,
+        database_name=DATABASE_NAME,
+        username=DB_USERNAME,
+        password=DB_PASSWORD,
+        port=PORT,
+    )
+    
+    logger.info(f"Starting pipeline run. Team ID: {team_id}, Season: {season}, API URL: {api_url}, Mode: {MODE}") 
 
     try:
         # Extracting
         extractor = ExtractBalldontlie(
+            sql_client = sql_client,
+            mode = MODE,
             api_key=BALL_DONT_LIE_API_KEY, 
             api_url=api_url, 
             team_id=team_id, 
-            season=season
+            season=season,
+            logger=logger
         )
         
-        team = extractor.extract_team()
-        team_players = extractor.extract_players()
-        
-        players_ids = [game.get("id") for game in team_players]
-        
-        team_games = extractor.extract_games()
-        players_stats = extractor.extract_players_stats(players_ids)
+        team, team_players, team_games, players_stats = extractor.extract()
+        team_name = team.get("name").lower()
 
         # Transforming
         transformer = TransformBalldontlie(
             team_data=team, 
             team_players_data=team_players, 
             team_games_data=team_games, 
-            players_stats_data=players_stats
+            players_stats_data=players_stats,
+            logger=logger
         )
-        df_team = transformer.team()
-        df_team_employees = transformer.team_players()
-        df_team_games = transformer.team_games(team_id)
-        df_players_performance = transformer.team_players_performance()
-        df_players_overall_performance = transformer.team_players_overall_performance()
+       
+        df_team, df_team_players, df_team_games, df_players_performance, df_players_overall_performance = transformer.transform()
 
-        # # Loading
-        SERVER_NAME = os.environ.get("DB_SERVER_NAME")
-        DATABASE_NAME = os.environ.get("DB_NAME")
-        DB_USERNAME = os.environ.get("DB_USERNAME")
-        DB_PASSWORD = os.environ.get("DB_PASSWORD")
-        PORT = os.environ.get("DB_PORT")
-
-        postgresql_client = PostgreSqlClient(
-            server_name=SERVER_NAME,
-            database_name=DATABASE_NAME,
-            username=DB_USERNAME,
-            password=DB_PASSWORD,
-            port=PORT,
-        )
-      
-        tables_template = Environment(
-            loader=FileSystemLoader("etl/assets/sql/tables")
-        )
-        
+        # Loading        
         loader = LoadBalldontlie(
             tables_template=tables_template, 
             team_name=team_name, 
             season=season, 
-            postgresql_client=postgresql_client
+            sql_client=sql_client,
+            logger=logger,
+            df_team=df_team,
+            df_team_players=df_team_players,
+            df_team_games=df_team_games,
+            df_players_performance=df_players_performance,
+            df_players_overall_performance=df_players_overall_performance,
         )
-  
-        loader.load_team(df_team, "team")
-        loader.load_team_players(df_team_employees, "players")
-        loader.load_team_games(df_team_games, "games")
-        loader.load_players_performance(df_players_performance, "players_performance")
-        loader.load_players_overall_performance(df_players_overall_performance, "players_overall_performance")
-
-        # team_name = df_team.get("name")
-        # season = start_date.split("-")[0]
         
-        # team_table = postgresql_client.create_table(df_team, f"{team_name}_team_{season}")
-        # team_players_table = postgresql_client.create_table(df_team_players, f"{team_name}_players_{season}")
-        # team_games_table = postgresql_client.create_table(df_team_games, f"{team_name}_games_{season}")
-        # team_stats_table = postgresql_client.create_table(df_players_stats, f"{team_name}_players_stats_{season}")
-        # team_performance_table = postgresql_client.create_table(df_team_performance, f"{team_name}_team_performance_{season}")
-        # players_performance_table = postgresql_client.create_table(df_players_performance, f"{team_name}_players_performance_{season}")
-
-        # loader = LoadBalldontlie()
-        # loader.load(df_team, team_table)
-        # loader.load(df_team_players, team_players_table)
-        # loader.load(df_team_games, team_games_table)
-        # loader.load(df_players_stats, team_stats_table)
-        # loader.load(df_team_performance, team_performance_table)
-        # loader.load(df_players_performance, players_performance_table)
-
+        loader.load()
+        
+        logger.info("Pipeline run successfully.")
     except Exception as e:
-        print(f"Pipeline run failed. See detailed logs: {e}")
-        # pipeline_logging.logger.error(f"Pipeline run failed. See detailed logs: {e}")
-        # metadata_logger.log(
-        #     status=MetaDataLoggingStatus.RUN_FAILURE, logs=pipeline_logging.get_logs()
-        # )  # log
+        logger.error(f"Pipeline run failed. See detailed logs: {e}")
+       
 
