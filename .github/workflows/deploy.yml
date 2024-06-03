@@ -8,6 +8,10 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: us-east-1  # Certifique-se de configurar isso se sua região for diferente
     steps:
     - name: Check out the code
       uses: actions/checkout@v3
@@ -27,8 +31,4 @@ jobs:
 
     - name: Run ECS Task
       run: |
-        aws ecs run-task --cluster ${{ secrets.ECS }} --task-definition ${{secrets.ECS_TASK_DEFINITION }}
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        AWS_DEFAULT_REGION: us-east-1
+        aws ecs run-task --cluster ${{ secrets.ECS }} --task-definition ${{ secrets.ECS_TASK_DEFINITION }}
