@@ -48,6 +48,7 @@ class ExtractBalldontlie:
         cursor = 0
         if self.mode == "increment":
             cursor = self.sql_client.select_max_id(f"{self.team_name}_{self.season}_games")
+            Logger.info(f"Extracting games cursor: {cursor}")
             
         url = f"{self.base_url}/games"
         params = {
@@ -64,6 +65,7 @@ class ExtractBalldontlie:
         cursor = 0
         if self.mode == "increment":
             cursor = self.sql_client.select_max_id(f"{self.team_name}_{self.season}_players_performance")
+            Logger.info(f"Extracting players stats cursor: {cursor}")
             
         url = f"{self.base_url}/stats"
         params = {
