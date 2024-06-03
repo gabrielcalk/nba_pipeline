@@ -22,6 +22,9 @@ def get_config():
         else:
             raise Exception(f"Missing {yaml_file_path} file")
         
+    print(os.environ.get("AWS_ACCESS_KEY_ID"))
+    print(os.environ.get("AWS_SECRET_ACCESS_KEY"))
+        
     config = {
         "team_id": get_parameter('team_id'),
         "season": get_parameter('season'),
