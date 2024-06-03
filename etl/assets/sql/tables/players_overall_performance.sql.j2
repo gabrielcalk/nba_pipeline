@@ -1,0 +1,20 @@
+CREATE TABLE {{ table_name | lower }} (
+    id INT PRIMARY KEY,
+    "totalMinutesPlayed" INT,
+    "averageMinutesPlayedPerGame" FLOAT,
+
+    "totalFieldGoalsAttempted" INT,
+    "totalFieldGoalsMade" INT,
+    "fieldGoalPercentage" FLOAT,
+
+    "totalThreePointsAttempted" INT,
+    "totalThreePointsMade" INT,
+    "threePointsPercentage" FLOAT,
+
+    "totalFreeThrowsAttempted" INT,
+    "totalFreeThrowsMade" INT,
+    "freeThrowsPercentage" FLOAT,
+
+    "totalAssists" INT,
+    "totalPoints" INT
+);

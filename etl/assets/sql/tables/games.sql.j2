@@ -1,0 +1,16 @@
+CREATE TABLE {{ table_name | lower }} (
+    id INT PRIMARY KEY,
+    date DATE,
+    season INT,
+    status VARCHAR(50),
+    postseason BOOLEAN,
+    "opponentTeam" VARCHAR(255),
+    "opponentTeamConference" VARCHAR(50),
+    "isHomeGame" BOOLEAN,
+    "homeTeamScore" INT,
+    "visitorTeamScore" INT,
+    "totalPoints" INT,
+    "result" VARCHAR(10),
+    "cumulativeWins" INT,
+    "cumulativeLosses" INT
+);
