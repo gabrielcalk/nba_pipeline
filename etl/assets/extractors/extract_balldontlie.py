@@ -14,7 +14,7 @@ class ExtractBalldontlie:
         
     def extract(self):
         team = self.extract_team()
-        self.team_name = team.get('name')
+        self.team_name = team.get('name').lower()
         self.logger.info(f"Extracted team data: {self.team_name}")
         
         team_players = self.extract_players()
@@ -48,6 +48,7 @@ class ExtractBalldontlie:
         cursor = 0
         if self.mode == "increment":
             cursor = self.sql_client.select_max_id(f"{self.team_name}_{self.season}_games")
+            self.logger.info(f"Extracting games cursor: {cursor}")
             
         url = f"{self.base_url}/games"
         params = {
@@ -64,6 +65,7 @@ class ExtractBalldontlie:
         cursor = 0
         if self.mode == "increment":
             cursor = self.sql_client.select_max_id(f"{self.team_name}_{self.season}_players_performance")
+            self.logger.info(f"Extracting players stats cursor: {cursor}")
             
         url = f"{self.base_url}/stats"
         params = {

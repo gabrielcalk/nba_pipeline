@@ -1,6 +1,0 @@
-2024-06-03 09:24:25,917 - nba_pipeline - INFO - Extracted team data: Boston Celtics
-2024-06-03 09:24:26,871 - nba_pipeline - INFO - Extracted players data on season 2023. Length: 18
-2024-06-03 09:24:26,871 - nba_pipeline - INFO - Extracted players ids. players_ids: [47, 70, 186, 189, 214, 219, 253, 261, 269, 316, 338, 362, 378, 429, 434, 459, 473, 488]
-2024-06-03 09:24:28,295 - nba_pipeline - INFO - Extracted games data on season 2023. Length: 100
-2024-06-03 09:24:39,868 - nba_pipeline - INFO - Extracted players stats data on season 2023. Length: 768
-2024-06-03 09:24:39,884 - nba_pipeline - ERROR - Pipeline run failed. See detailed logs: cannot unpack non-iterable NoneType object
