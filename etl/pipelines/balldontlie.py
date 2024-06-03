@@ -22,9 +22,6 @@ def get_config():
         else:
             raise Exception(f"Missing {yaml_file_path} file")
         
-    print(os.environ.get("AWS_ACCESS_KEY_ID"))
-    print(os.environ.get("AWS_SECRET_ACCESS_KEY"))
-        
     config = {
         "team_id": get_parameter('team_id'),
         "season": get_parameter('season'),
@@ -49,6 +46,8 @@ if __name__ == "__main__":
     MODE = os.environ.get("MODE", "increment")
     
     BALL_DONT_LIE_API_KEY = os.environ.get("BALL_DONT_LIE_API_KEY")
+    
+    print(BALL_DONT_LIE_API_KEY)
     
     tables_template = Environment(
         loader=FileSystemLoader("etl/assets/sql")
