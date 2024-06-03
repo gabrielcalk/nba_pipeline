@@ -32,7 +32,7 @@ class LoadBalldontlie:
         
     def load(self, mode: str):
         if(mode == "full"):
-            self.sql_client.drop_tables()
+            self.sql_client.drop_tables(self.team_name, self.season)
         self.load_team("team")
         self.load_team_players("players")
         self.load_team_games("games")
