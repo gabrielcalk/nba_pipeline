@@ -3,7 +3,7 @@ name: Deploy to AWS ECR and ECS
 on:
   push:
     branches:
-      - master
+      - release
 
 jobs:
   deploy:
@@ -27,7 +27,7 @@ jobs:
 
     - name: Run ECS Task
       run: |
-        aws ecs run-task --cluster ${{ secrets.ECS }} --task-definition ${{secrets.ECS_TASK_DEFINITION }} --launch-type EC2
+        aws ecs run-task --cluster ${{ secrets.ECS }} --task-definition ${{secrets.ECS_TASK_DEFINITION }}
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
