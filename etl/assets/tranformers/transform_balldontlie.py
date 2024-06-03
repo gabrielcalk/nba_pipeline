@@ -12,28 +12,26 @@ class TransformBalldontlie:
 
     def transform(self):
         df_team = self.team()
-        self.logger.info(f"Transformed team data")
-        
         df_team_players = self.team_players()
-        self.logger.info(f"Transformed players data. Size: {len(df_team_players)}")
-        
         df_team_games = self.team_games(self.team_data['id'])
-        self.logger.info(f"Transformed games data. Size: {len(df_team_games)}")
-        
         df_players_performance = self.team_players_performance()
-        self.logger.info(f"Transformed players performance data. Size: {len(df_players_performance)}")
-        
         df_players_overall_performance = self.team_players_overall_performance()
-        self.logger.info(f"Transformed players overall performance data. Size: {len(df_players_overall_performance)}")
         
         return df_team, df_team_players, df_team_games, df_players_performance, df_players_overall_performance
     
     def team(self):
+        if not self.team_data or len(self.team_data) == 0:
+            return DataFrame()
+        
         df_team = DataFrame(self.team_data, index=[0])
         df_team.rename(columns={'full_name': 'fullName'}, inplace=True)
+        self.logger.info(f"Transformed team data")
         return df_team
     
     def team_players(self):
+        if not self.team_players_data or len(self.team_players_data) == 0:
+            return DataFrame()
+        
         df_team = DataFrame(self.team_players_data)
         df_team.rename(columns={'jersey_number': 'jerseyNumber'}, inplace=True)
         df_team['fullName'] = df_team['first_name'] + ' ' + df_team['last_name']
@@ -43,6 +41,7 @@ class TransformBalldontlie:
 
         df_final = df_team[['id', 'fullName', 'position', 'height', 'weight', 'jerseyNumber', 'college', 'country', 'yearsSinceDraft', 'teamId']]
 
+        self.logger.info(f"Transformed players data. Size: {len(df_final)}")
         return df_final
     
     def team_games(self, team_id: int):
@@ -67,6 +66,7 @@ class TransformBalldontlie:
         df_team['cumulativeLosses'] = (df_team['result'] == 'Loss').cumsum()
 
         df_final = df_team[['id', 'date', 'season', 'postseason', 'opponentTeam', 'status', 'opponentTeamConference', 'isHomeGame',  'totalPoints', 'homeTeamScore', 'visitorTeamScore', 'result', 'cumulativeWins', 'cumulativeLosses']]
+        self.logger.info(f"Transformed games data. Size: {len(df_final)}")
         return df_final
     
     def team_players_performance(self):
@@ -132,6 +132,7 @@ class TransformBalldontlie:
                    'rebounds', 'assists', 'steals', 'blocks', 'personalFouls', 'points']
         
         df_final = df_team_players_performance[columns_to_keep]
+        self.logger.info(f"Transformed players performance data. Size: {len(df_final)}")
         return df_final
     
     def team_players_overall_performance(self):
@@ -169,5 +170,5 @@ class TransformBalldontlie:
         performance_stats.reset_index(inplace=True)
 
         performance_stats.rename(columns={'playerId': 'id'}, inplace=True)
-
+        self.logger.info(f"Transformed players overall performance data. Size: {len(performance_stats)}")
         return performance_stats

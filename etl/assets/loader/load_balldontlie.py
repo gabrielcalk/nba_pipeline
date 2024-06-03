@@ -40,26 +40,41 @@ class LoadBalldontlie:
         self.load_players_overall_performance("players_overall_performance")
   
     def load_team(self, file_name: str):
+        if len(self.df_team) == 0:
+            return
+        
         table_name = f"{self.team_name}_{file_name}"
         self.logger.info(f"Loaded team data. Size: {len(self.df_team)}. Table: {table_name}")
         self.sql_client.upsert(self.df_team, self.tables_template, table_name, file_name, self.chunk_size)
         
     def load_team_players(self, file_name: str):
+        if len(self.df_team_players) == 0:
+            return
+        
         table_name = f"{self.team_name}_{self.season}_{file_name}"
         self.logger.info(f"Loaded team players data. Size: {len(self.df_team_players)}. Table: {table_name}")
         self.sql_client.upsert(self.df_team_players, self.tables_template, table_name, file_name, self.chunk_size)
         
     def load_team_games(self, file_name: str):
+        if len(self.df_team_games) == 0:
+            return
+        
         table_name = f"{self.team_name}_{self.season}_{file_name}"
         self.logger.info(f"Loaded team games data. Size: {len(self.df_team_games)}. Table: {table_name}")
         self.sql_client.upsert(self.df_team_games, self.tables_template, table_name, file_name, self.chunk_size)
     
     def load_players_performance(self, file_name: str):
+        if len(self.df_players_performance) == 0:
+            return
+        
         table_name = f"{self.team_name}_{self.season}_{file_name}"
         self.logger.info(f"Loaded players performance data. Size: {len(self.df_players_performance)}. Table: {table_name}")
         self.sql_client.upsert(self.df_players_performance, self.tables_template, table_name, file_name, self.chunk_size)
     
     def load_players_overall_performance(self, file_name: str):
+        if len(self.df_players_overall_performance) == 0:
+            return
+        
         table_name = f"{self.team_name}_{self.season}_{file_name}"
         self.logger.info(f"Loaded players overall performance data. Size: {len(self.df_players_overall_performance)}. Table: {table_name}")
         self.sql_client.upsert(self.df_players_overall_performance, self.tables_template, table_name, file_name, self.chunk_size)
