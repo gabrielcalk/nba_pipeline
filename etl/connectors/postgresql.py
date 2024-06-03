@@ -41,6 +41,8 @@ class PostgreSqlClient:
         return [dict(row) for row in result]
     
     def select_max_id(self, table_name: str) -> int:
+        if not self.table_exists(table_name):
+            return 0
         result = self.select(f"select max(id) from {table_name}")
         return result[0]['max']
     

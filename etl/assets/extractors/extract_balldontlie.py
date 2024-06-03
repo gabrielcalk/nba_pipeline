@@ -45,7 +45,7 @@ class ExtractBalldontlie:
         return data.get("data")
 
     def extract_games(self):
-        cursor = None
+        cursor = 0
         if self.mode == "increment":
             cursor = self.sql_client.select_max_id(f"{self.team_name}_{self.season}_games")
             
@@ -61,7 +61,7 @@ class ExtractBalldontlie:
         return collected_data
 
     def extract_players_stats(self, players_ids: list[int]):
-        cursor = None
+        cursor = 0
         if self.mode == "increment":
             cursor = self.sql_client.select_max_id(f"{self.team_name}_{self.season}_players_performance")
             
