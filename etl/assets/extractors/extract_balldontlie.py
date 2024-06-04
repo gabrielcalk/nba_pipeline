@@ -70,6 +70,9 @@ class ExtractBalldontlie:
         return collected_data
 
     def extract_players_stats(self, player_ids):
+        if not player_ids or len(player_ids) == 0:
+            return []
+        
         cursor = 0
         if self.mode == "increment":
             cursor = self.sql_client.select_max_id(f"{self.team_name}_{self.season}_players_performance")
